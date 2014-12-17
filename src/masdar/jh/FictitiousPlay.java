@@ -4,6 +4,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -137,7 +138,10 @@ public class FictitiousPlay
 	  int availableTokens = state.optInt("availableToks");
     
 	  HashMap<String, Integer> receivedTokens = recordHistory(state);
-	  HashMap<String, Integer> totalReceivedValues = new HashMap<String, Integer>();
+	  HashMap<String, HashMap<Integer, Integer>> fictitiousData = new HashMap<String, HashMap<Integer, Integer>>();
+	  HashMap<String, HashMap<Integer, Double>> posteriors = new HashMap<String, HashMap<Integer, Double>>();
+	  
+	  HashMap<String, Integer> toGiveValues = new HashMap<String, Integer>();
 	  
 	  // Get my user
 	  JSONObject myuser = null;
@@ -148,28 +152,67 @@ public class FictitiousPlay
 		  {
 			  myuser = user;
 		  }
+		  
+		  // instanced the fictitiousData
+		  HashMap<Integer, Integer> temp = new HashMap<Integer, Integer>();
+		  HashMap<Integer, Double> temp2 = new HashMap<Integer, Double>();
+		  for(int j = -(2*users.length()); j <= (2*users.length()); j++)
+		  {
+			  if(j > 0)	temp.put(j, 1);
+			  else	temp.put(j, 0);
+			  
+			  temp2.put(j, 0.0);
+		  }
+		  fictitiousData.put(user.optString("id"), temp);
+		  posteriors.put(user.optString("id"), temp2);
 	  }
 	  
 	  // Get total received values until T
-	  int normalizer = 0;
+	  int finalNormalizer = 0;
 	  for(int i = 0; i < users.length(); i++)
 	  {
 		  JSONObject user = users.getJSONObject(i);
+		  int normalizer = 0;
+		  
 		  if(!user.optBoolean("isCurrentPlayer")) 
 		  {
-			  int total = 0;
+			  // Update the fictitiousData
 			  for(int x = 0; x < history.size(); x++)
 			  {
-				  total += history.get(x).get(user.optString("id"));
+				  int action = history.get(x).get(user.optString("id"));
+				  int nextData = fictitiousData.get(user.optString("id")).get(action) + 1;
+				  fictitiousData.get(user.optString("id")).replace(action, nextData);
 			  }
 			  
-			  double value = total * popularityHistory.get(popularityHistory.size()-1).get(user.optString("id"));  
+			  // Count normalizer
+			  for(int x = -(2*users.length()); x <= (2*users.length()); x++)
+			  {
+				  normalizer += fictitiousData.get(user.opt("id")).get(x);
+			  }
+			  
+			  // Count posterior
+			  double maxPost = 0.0;
+			  int maxAction = -99;
+			  for(int x = -(2*users.length()); x <= (2*users.length()); x++)
+			  {
+				  double postTemp = fictitiousData.get(user.optString("id")).get(x) / normalizer;
+				  posteriors.get(user.optString("id")).replace(x, postTemp);
+				  
+				  if(postTemp > maxPost)
+				  {
+					  maxPost = postTemp;
+					  maxAction = x;
+				  }
+			  }
+			  
+			  
+			  double value = maxAction * popularityHistory.get(popularityHistory.size()-1).get(user.optString("id"));  
 			  double toGive = value / (popularityHistory.get(popularityHistory.size()-1).get(myuser.optString("id")));
 			  
 			  int toGiveInt = (int)Math.floor(toGive);
-			  totalReceivedValues.put(user.optString("id"), toGiveInt);
+			  toGiveValues.put(user.optString("id"), toGiveInt);
 			  
-			  normalizer += Math.abs(toGiveInt);
+			  finalNormalizer += toGiveInt;
 		  }
 	  }
 	  
@@ -178,8 +221,8 @@ public class FictitiousPlay
 		  JSONObject user = users.getJSONObject(i);
 		  if(!user.optBoolean("isCurrentPlayer"))
 		  {
-			  int toGive = totalReceivedValues.get(user.optString("id"));
-			  int finalGive = (int)Math.floor((double)toGive / normalizer * (2*users.length()));
+			  int toGive = toGiveValues.get(user.optString("id"));
+			  int finalGive = (int)Math.floor((double)toGive / finalNormalizer * (2*users.length()));
 			  
 			  if(availableTokens >= finalGive)
 			  {
@@ -192,7 +235,10 @@ public class FictitiousPlay
 	  giveHistory.add(transactionsToDo);
 	  return transactionsToDo;
   	}
+
 }
+
+
 
 
 /* Location:           E:\Projects\NetBeansProjects\jhgclient\bin\
