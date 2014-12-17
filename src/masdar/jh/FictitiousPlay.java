@@ -137,9 +137,57 @@ public class FictitiousPlay
 	  int availableTokens = state.optInt("availableToks");
     
 	  HashMap<String, Integer> receivedTokens = recordHistory(state);
+	  HashMap<String, Integer> totalReceivedValues = new HashMap<String, Integer>();
 	  
+	  // Get my user
+	  JSONObject myuser = null;
+	  for(int i = 0; i < users.length(); i++)
+	  {
+		  JSONObject user = users.getJSONObject(i);
+		  if(user.optBoolean("isCurrentPlayer"))
+		  {
+			  myuser = user;
+		  }
+	  }
 	  
+	  // Get total received values until T
+	  int normalizer = 0;
+	  for(int i = 0; i < users.length(); i++)
+	  {
+		  JSONObject user = users.getJSONObject(i);
+		  if(!user.optBoolean("isCurrentPlayer")) 
+		  {
+			  int total = 0;
+			  for(int x = 0; x < history.size(); x++)
+			  {
+				  total += history.get(x).get(user.optString("id"));
+			  }
+			  
+			  double value = total * popularityHistory.get(popularityHistory.size()-1).get(user.optString("id"));  
+			  double toGive = value / (popularityHistory.get(popularityHistory.size()-1).get(myuser.optString("id")));
+			  
+			  int toGiveInt = (int)Math.floor(toGive);
+			  totalReceivedValues.put(user.optString("id"), toGiveInt);
+			  
+			  normalizer += Math.abs(toGiveInt);
+		  }
+	  }
 	  
+	  for(int i = 0; i < users.length(); i++)
+	  {
+		  JSONObject user = users.getJSONObject(i);
+		  if(!user.optBoolean("isCurrentPlayer"))
+		  {
+			  int toGive = totalReceivedValues.get(user.optString("id"));
+			  int finalGive = (int)Math.floor((double)toGive / normalizer * (2*users.length()));
+			  
+			  if(availableTokens >= finalGive)
+			  {
+				  transactionsToDo.put(user.optString("id"), finalGive);
+			  }
+			  availableTokens -= Math.abs(finalGive);
+		  }
+	  }
 	  
 	  giveHistory.add(transactionsToDo);
 	  return transactionsToDo;
