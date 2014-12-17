@@ -82,9 +82,8 @@
 /*     */               }
 /*     */               finally
 /*     */               {
-/*     */                 boolean isMoveOk;
 /*  96 */                 System.out.println(transactions.toString());
-/*  97 */                 boolean isMoveOk = api.makeMove(gameId, transactions);
+/*  97 */				  isMoveOk = api.makeMove(gameId, transactions);
 /*  98 */                 if (isMoveOk) {
 /*  99 */                   System.out.println("Last move was successful");
 /*     */                 } else {
