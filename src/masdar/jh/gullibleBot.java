@@ -1,198 +1,191 @@
-/*     */ package masdar.jh;
-/*     */ 
-/*     */ import java.io.PrintStream;
-/*     */ import java.util.ArrayList;
-/*     */ import java.util.HashMap;
-/*     */ import java.util.Random;
-/*     */ import org.json.JSONArray;
-/*     */ import org.json.JSONObject;
-/*     */ 
-/*     */ public class gullibleBot
-/*     */ {
-/*     */   private static final String TOKEN = "106586887905360722018-1417587110062";
-/*     */   private static final String SERVER_HOST = "http://www.juniorhighgame.com";
-/*  23 */   private static ArrayList<HashMap<String, Integer>> history = new ArrayList();
-/*  24 */   private static ArrayList<HashMap<String, Double>> popularityHistory = new ArrayList();
-/*  25 */   private static ArrayList<HashMap<String, Integer>> giveHistory = new ArrayList();
-/*  27 */   private static JhBotApi api = new JhBotApi("http://www.juniorhighgame.com", "106586887905360722018-1417587110062");
-/*     */   
-/*     */   public static void main(String[] args)
-/*     */   {
-/*  30 */     System.out.println("Program started.");
-/*     */     
-/*  32 */     JSONArray games = api.getGamesList();
-/*     */     
-/*  34 */     System.out.println("Listing available games\n---------------");
-/*  35 */     for (int i = 0; i < games.length(); i++)
-/*     */     {
-/*  36 */       JSONObject game = games.getJSONObject(i);
-/*  37 */       System.out.println(game.optString("name") + " id: " + game.optString("id"));
-/*     */     }
-/*  39 */     System.out.println("---------------");
-/*  40 */     if (games.length() == 0)
-/*     */     {
-/*  41 */       System.out.println("No games available. Exiting");
-/*  42 */       System.exit(0);
-/*     */     }
-/*  46 */     long gameId = games.optJSONObject(0).optLong("id");
-/*  47 */     gameId = 947L;
-/*     */     
-/*  49 */     System.out.println("Joining the first game in the list (" + gameId + "). Was joining successful:" + 
-/*  50 */       api.joinGame(gameId));
-/*     */     
-/*  52 */     JSONObject prevGameState = api.getGameState(gameId);
-/*     */     
-/*  54 */     boolean test = true;
-/*  58 */     while (test)
-/*     */     {
-/*  59 */       JSONObject newGameState = api.getGameState(gameId);
-/*     */       
-/*  61 */       JSONArray users = newGameState.optJSONArray("users");
-/*  66 */       if (newGameState == null)
-/*     */       {
-/*  67 */         System.out.println("State is null and that is not ok. Please check the code");
-/*     */       }
-/*     */       else
-/*     */       {
-/*  70 */         if (prevGameState != null)
-/*     */         {
-/*  71 */           if (newGameState.getInt("state") == 2)
-/*     */           {
-/*  72 */             System.out.println("Game has finished");
-/*  73 */             break;
-/*     */           }
-/*  75 */           if (newGameState.getInt("state") == 1)
-/*     */           {
-/*  76 */             if (prevGameState.getInt("state") == 0) {
-/*  77 */               System.out.println("Yahoo! The game has started!");
-/*     */             }
-/*  79 */             if (prevGameState.getInt("round") < newGameState.getInt("round"))
-/*     */             {
-/*  81 */               HashMap<String, Integer> transactions = new HashMap();
-/*     */               boolean isMoveOk;
-/*     */               try
-/*     */               {
-/*  84 */                 transactions = makeMove(newGameState);
-/*     */               }
-/*     */               catch (Exception ex)
-/*     */               {
-/*  93 */                 System.err.println("There was an error while invoking makeMove function.\nPlease check it.\n This will be accounted as you have kept all the tokens to yourself\nThe stack trace of the error is presented below");
-/*  94 */                 ex.printStackTrace();
-/*     */               }
-/*     */               finally
-/*     */               {
-/*     */                 isMoveOk = api.makeMove(gameId, transactions);
-/*  98 */                 if (isMoveOk) {
-/*  99 */                   System.out.println("Last move was successful");
-/*     */                 } else {
-/* 101 */                   System.out.println("Last move failed! Check previous logs for more info on the error");
-/*     */                 }
-/*     */               }
-/*     */             }
-/*     */           }
-/*     */         }
-/* 106 */         prevGameState = newGameState;
-/*     */         try
-/*     */         {
-/* 108 */           Thread.sleep(3000L);
-/*     */         }
-/*     */         catch (InterruptedException e)
-/*     */         {
-/* 110 */           e.printStackTrace();
-/*     */         }
-/*     */       }
-/*     */     }
-/* 114 */     System.out.println("Program finished. So long and thank you for all the fish!");
-/*     */   }
-/*     */   
-/*     */   private static HashMap<String, Integer> recordHistory(JSONObject state)
-/*     */   {
-/* 118 */     HashMap<String, Integer> receivedTokens = new HashMap();
-/* 119 */     HashMap<String, Double> popularities = new HashMap();
-/*     */     try
-/*     */     {
-/* 121 */       JSONArray users = state.optJSONArray("users");
-/* 123 */       for (int i = 0; i < users.length(); i++)
-/*     */       {
-/* 124 */         JSONObject user = users.optJSONObject(i);
-/* 125 */         if (!user.optBoolean("isCurrentPlayer")) {
-/* 126 */           receivedTokens.put(user.optString("id"), Integer.valueOf(user.optInt("received")));
-/*     */         }
-/* 128 */         popularities.put(user.getString("id"), Double.valueOf(user.optDouble("popularity")));
-/*     */       }
-/* 131 */       history.add(receivedTokens);
-/* 132 */       popularityHistory.add(popularities);
-/*     */     }
-/*     */     catch (Exception ex)
-/*     */     {
-/* 135 */       System.out.println("Sadly, there was an exception while recording hte history. Here is the stack trace");
-/* 136 */       ex.printStackTrace();
-/*     */     }
-/* 138 */     return receivedTokens;
-/*     */   }
-/*     */   
-/*     */   private static HashMap<String, Integer> makeMove(JSONObject state)
-/*     */     throws Exception
-/*     */   {
-/* 149 */     HashMap<String, Integer> transactionsToDo = new HashMap();
-/*     */     
-/*     */ 
-/* 152 */     JSONArray users = state.optJSONArray("users");
-/*     */     
-/*     */ 
-/* 155 */     int availableTokens = state.optInt("availableToks");
-/*     */     
-/* 157 */     HashMap<String, Integer> receivedTokens = recordHistory(state);
-/*     */     
-/*     */ 
-/*     */ 
-/*     */ 
-/* 162 */     int currentRound = state.getInt("round");
-/* 163 */     for (int i = 0; i < users.length(); i++)
-/*     */     {
-/* 165 */       JSONObject user = users.getJSONObject(i);
-/* 166 */       if (!user.optBoolean("isCurrentPlayer")) {
-/* 171 */         if (currentRound == 1)
-/*     */         {
-/* 173 */           transactionsToDo.put(user.optString("id"), Integer.valueOf(1));
-/* 174 */           availableTokens--;
-/*     */         }
-/*     */         else
-/*     */         {
-/* 178 */           int lastGivenToken = ((Integer)((HashMap)history.get(history.size() - 1)).get(user.optString("id"))).intValue();
-/* 179 */           int max = 2 * users.length();
-/* 181 */           if (lastGivenToken >= max - 1)
-/*     */           {
-/* 183 */             if (availableTokens > 0)
-/*     */             {
-/* 185 */               while (availableTokens < max) {
-/* 187 */                 max--;
-/*     */               }
-/* 189 */               transactionsToDo.put(user.optString("id"), Integer.valueOf(max));
-/* 190 */               availableTokens -= Math.abs(max);
-/*     */             }
-/*     */           }
-/*     */           else
-/*     */           {
-/* 196 */             int min = lastGivenToken + 1;
-/* 197 */             Random rand = new Random();
-/* 198 */             int toGive = rand.nextInt(max - min + 1) + min;
-/* 199 */             if (availableTokens > 0)
-/*     */             {
-/* 201 */               while (availableTokens < toGive) {
-/* 203 */                 toGive--;
-/*     */               }
-/* 205 */               transactionsToDo.put(user.optString("id"), Integer.valueOf(toGive));
-/* 206 */               availableTokens -= Math.abs(toGive);
-/*     */             }
-/*     */           }
-/*     */         }
-/*     */       }
-/*     */     }
-/* 214 */     giveHistory.add(transactionsToDo);
-/* 215 */     return transactionsToDo;
-/*     */   }
-/*     */ }
+package masdar.jh;
+ 
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Random;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+public class gullibleBot
+{
+	private static final String TOKEN = "106586887905360722018-1417587110062";
+	private static final String SERVER_HOST = "http://www.juniorhighgame.com";
+	private static ArrayList<HashMap<String, Integer>> history = new ArrayList();
+	private static ArrayList<HashMap<String, Double>> popularityHistory = new ArrayList();
+	private static ArrayList<HashMap<String, Integer>> giveHistory = new ArrayList();
+	private static JhBotApi api = new JhBotApi("http://www.juniorhighgame.com", "106586887905360722018-1417587110062");
+
+	public static void main(String[] args) {
+	    System.out.println("Program started.");
+	
+	    JSONArray games = api.getGamesList();
+	
+	    System.out.println("Listing available games\n---------------");
+	    for(int i=0; i<games.length(); i++) {
+	        JSONObject game = games.getJSONObject(i);
+	        System.out.println(game.optString("name") + " id: " + game.optString("id"));
+	    }
+	    System.out.println("---------------");
+	    if(games.length() == 0 ) {
+	        System.out.println("No games available. Exiting");
+	        System.exit(0);
+	    }
+	
+	    // GAME JOINING PART IS HERE
+	    long gameId = 2776; //games.optJSONObject(0).optLong("id");
+	
+	    System.out.println("Joining the first game in the list ("+gameId+"). Was joining successful:"
+	            + api.joinGame(gameId));
+	    // END GAME JOINING APRT
+	    JSONObject prevGameState = api.getGameState(gameId);
+	    
+	    boolean test = true;
+	    
+	    while(test) {
+	        JSONObject newGameState = api.getGameState(gameId);
+	        
+	        if (newGameState == null) {
+	            System.out.println("State is null and that is not ok. Please check the code");
+	        }
+	        else {
+	            if(prevGameState != null) {
+	                if (newGameState.getInt("state") == JhBotApi.STATE_FINISHED) {
+	                    System.out.println("Game has finished");
+	                    break;
+	                }
+	                if (newGameState.getInt("state") == JhBotApi.STATE_IN_PROGRESS) {
+	                    if (prevGameState.getInt("state") == JhBotApi.STATE_NOT_STARTED) {
+	                        System.out.println("Yahoo! The game has started!");
+	                    }
+	                    if(prevGameState.getInt("round") < newGameState.getInt("round")) {
+	                        // New round has started
+	                        HashMap<String, Integer> transactions = new HashMap<String, Integer>();
+	                        try {
+	                            // Lets try to run your function
+	                        	
+	                        	 
+	                        	transactions = makeMove(newGameState);
+	                        }
+	                        catch (Exception ex) {
+	                            // If execution reached this part then you did something wrong in makeMove method!
+	                            // Try harder, debug and try again!
+	                            // DO NOT instantly mail me or the TA. Think and google before that.
+	                            // Anyway, if after an hour of debugging you still have no idea why your code does not work
+	                            // feel free to send me an email with a PayPal payment of 1$ (attaching this whole file)
+	                            // to hrafael@masdar.ac.ae
+	                            System.err.println("There was an error while invoking makeMove function.\nPlease check it.\n This will be accounted as you have kept all the tokens to yourself\nThe stack trace of the error is presented below");
+	                            ex.printStackTrace();
+	                        }
+	                        finally {
+	                            boolean isMoveOk = api.makeMove(gameId, transactions);
+	                            if(isMoveOk)
+	                                System.out.println("Last move was successful");
+	                            else
+	                                System.out.println("Last move failed! Check previous logs for more info on the error");
+	                        }
+	                    }
+	                }
+	            }
+	            prevGameState = newGameState;
+	            try {
+	                Thread.sleep(3000);
+	            } catch (InterruptedException e) {
+	                e.printStackTrace();
+	            }
+	        }
+	    }
+	    System.out.println("Program finished. So long and thank you for all the fish!");
+	}
+
+	private static HashMap<String, Integer> recordHistory(JSONObject state)
+	{
+		HashMap<String, Integer> receivedTokens = new HashMap();
+		HashMap<String, Double> popularities = new HashMap();
+		try
+		{
+			JSONArray users = state.optJSONArray("users");
+			for (int i = 0; i < users.length(); i++)
+			{
+				JSONObject user = users.optJSONObject(i);
+				if (!user.optBoolean("isCurrentPlayer")) {
+					receivedTokens.put(user.optString("id"), Integer.valueOf(user.optInt("received")));
+				}
+				popularities.put(user.getString("id"), Double.valueOf(user.optDouble("popularity")));
+			}
+			history.add(receivedTokens);
+			popularityHistory.add(popularities);
+		}
+		catch (Exception ex)
+		{
+			System.out.println("Sadly, there was an exception while recording hte history. Here is the stack trace");
+			ex.printStackTrace();
+		}
+		return receivedTokens;
+	}
+
+	private static HashMap<String, Integer> makeMove(JSONObject state) throws Exception
+	{
+		HashMap<String, Integer> transactionsToDo = new HashMap();
+		JSONArray users = state.optJSONArray("users");
+		int availableTokens = state.optInt("availableToks");
+		HashMap<String, Integer> receivedTokens = recordHistory(state);
+		int currentRound = state.getInt("round");
+		
+		transactionsToDo = gullibleMove(availableTokens, currentRound, receivedTokens, users);
+
+		giveHistory.add(transactionsToDo);
+		return transactionsToDo;
+	}
+			
+	private static HashMap<String, Integer> gullibleMove(int availableTokens, int currentRound, HashMap<String, Integer> receivedTokens, JSONArray users) throws Exception
+	{
+		HashMap<String, Integer> transactionsToDo = new HashMap<String, Integer>();
+		for (int i = 0; i < users.length(); i++)
+		{
+			JSONObject user = users.getJSONObject(i);
+			if (!user.optBoolean("isCurrentPlayer")) {
+				if (currentRound == 1)
+				{
+					transactionsToDo.put(user.optString("id"), Integer.valueOf(1));
+					availableTokens--;
+				}
+				else
+				{
+					int lastGivenToken = ((Integer)((HashMap)history.get(history.size() - 1)).get(user.optString("id"))).intValue();
+					int max = 2 * users.length();
+					if (lastGivenToken >= max - 1)
+					{
+						if (availableTokens > 0)
+						{
+							while (availableTokens < max) {
+									max--;
+							}
+							transactionsToDo.put(user.optString("id"), Integer.valueOf(max));
+							availableTokens -= Math.abs(max);
+						}
+					}
+					else
+					{
+						int min = lastGivenToken + 1;
+						Random rand = new Random();
+						int toGive = rand.nextInt(max - min + 1) + min;
+						if (availableTokens > 0)
+						{
+							while (availableTokens < toGive) {
+								toGive--;
+							}
+							transactionsToDo.put(user.optString("id"), Integer.valueOf(toGive));
+							availableTokens -= Math.abs(toGive);
+						}
+					}
+				}
+			}
+		}
+		
+		return transactionsToDo;
+	}
+}
 
 
 /* Location:           E:\Projects\NetBeansProjects\jhgclient\bin\

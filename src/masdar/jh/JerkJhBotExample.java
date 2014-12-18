@@ -153,9 +153,19 @@ public class JerkJhBotExample {
         // this.history variable is an array of this kind of objects, representing the history during the game.
         /////////////// START YOUR CODE FROM HERE /////////////////////////////
         
+        transactionsToDo = jerkMove(users, availableTokens, receivedTokens);
+
+        /////////////// END YOUR CODE HERE /////////////////////////////
+        // By this point transactionsToDo must contain all transactions you want to do during this move
+        return transactionsToDo;
+    }
+    
+    private static HashMap<String, Integer> jerkMove(JSONArray users, int availableTokens, HashMap<String, Integer> receivedTokens) throws Exception
+    {
+    	HashMap<String, Integer> transactionsToDo = new HashMap<String, Integer>();
+    	
+    	 // Wael-21/11/2014  Tit-for-Tat
         
-        // Wael-21/11/2014  Tit-for-Tat
-                
         int Tokens = 2 * users.length();
         boolean done;
        
@@ -167,34 +177,28 @@ public class JerkJhBotExample {
 				continue;
         	
         		while( availableTokens>0 && !done )
-        		{
-        			       			
-        				Random rn = new Random();
-        				int SentTokens;
-        				
-        				if(receivedTokens.get(users.getJSONObject(uNum).optString("id")) == -Tokens)
-        					SentTokens= -Tokens;
-        				else
-        				SentTokens = - Tokens + rn.nextInt(receivedTokens.get(users.getJSONObject(uNum).optString("id"))+ Tokens);
-        				
-        				System.out.println(receivedTokens.get(users.getJSONObject(uNum).optString("id")));
-        				
-        				if(availableTokens - Math.abs(SentTokens) >=0)
-        				{
-        					transactionsToDo.put(users.getJSONObject(uNum).optString("id"), SentTokens);
-        					availableTokens = availableTokens - SentTokens;
-        					done = true;
-        				}
- 
-
-        		}
-         	
+        		{   			
+    				Random rn = new Random();
+    				int SentTokens;
+    				
+    				if(receivedTokens.get(users.getJSONObject(uNum).optString("id")) == -Tokens)
+    					SentTokens= -Tokens;
+    				else
+    					SentTokens = - Tokens + rn.nextInt(receivedTokens.get(users.getJSONObject(uNum).optString("id"))+ Tokens);
+    				
+    				System.out.println(receivedTokens.get(users.getJSONObject(uNum).optString("id")));
+    				
+    				if(availableTokens - Math.abs(SentTokens) >=0)
+    				{
+    					transactionsToDo.put(users.getJSONObject(uNum).optString("id"), SentTokens);
+    					availableTokens = availableTokens - SentTokens;
+    					done = true;
+    				}
+         		}
          }
-                                            
-
-        /////////////// END YOUR CODE HERE /////////////////////////////
-        // By this point transactionsToDo must contain all transactions you want to do during this move
+        
         return transactionsToDo;
+    	
     }
 }
 

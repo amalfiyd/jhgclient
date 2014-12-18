@@ -11,24 +11,6 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-// 28/11/2014 Wael-E this class is for sorting the HashMap objects by values
-class ValueComparator implements Comparator<String> {
-
-    HashMap<String, Double> base;
-    public ValueComparator(HashMap<String, Double> base) {
-        this.base = base;
-    }
-
-    // Note: this comparator imposes orderings that are inconsistent with equals.    
-    public int compare(String a, String b) {
-        if (base.get(a) >= base.get(b)) {
-            return -1;
-        } else {
-            return 1;
-        } // returning 0 would merge keys
-    }
-}
-
 public class tft_popBotExample {
     // SET THIS VARIABLE
     private static final String TOKEN = "106611669683912797583-1417162822988";
@@ -159,8 +141,6 @@ public class tft_popBotExample {
         // This array contains the users and the amount of tokens received from them on last round
         JSONArray users = state.optJSONArray("users");
  
-        
-        
         // This variable will contain available tokens for this round
         int availableTokens = state.optInt("availableToks");
      
@@ -169,10 +149,18 @@ public class tft_popBotExample {
         // this.history variable is an array of this kind of objects, representing the history during the game.
         /////////////// START YOUR CODE FROM HERE /////////////////////////////
         
-        
-        // Wael-21/11/2014  Tit-for-Tat
+        transactionsToDo = tftPopMove(users, availableTokens, receivedTokens);
+
+        /////////////// END YOUR CODE HERE /////////////////////////////
+        // By this point transactionsToDo must contain all transactions you want to do during this move
+        return transactionsToDo;
+    }
+    
+    private static HashMap<String, Integer> tftPopMove(JSONArray users, int availableTokens, HashMap<String, Integer> receivedTokens) throws Exception
+    {
+    	 // Wael-21/11/2014  Tit-for-Tat
         HashMap<String,Double> popularity = new HashMap<String,Double>();
-        
+        HashMap<String, Integer> transactionsToDo = new HashMap<String, Integer>();
         // Get the popularity of agents
         for(int i=0; i<users.length(); i++) {
             JSONObject user = users.optJSONObject(i);
@@ -209,11 +197,24 @@ public class tft_popBotExample {
         	
         }
         
-
-
-        /////////////// END YOUR CODE HERE /////////////////////////////
-        // By this point transactionsToDo must contain all transactions you want to do during this move
         return transactionsToDo;
     }
 }
 
+//28/11/2014 Wael-E this class is for sorting the HashMap objects by values
+class ValueComparator implements Comparator<String> {
+
+ HashMap<String, Double> base;
+ public ValueComparator(HashMap<String, Double> base) {
+     this.base = base;
+ }
+
+ // Note: this comparator imposes orderings that are inconsistent with equals.    
+ public int compare(String a, String b) {
+     if (base.get(a) >= base.get(b)) {
+         return -1;
+     } else {
+         return 1;
+     } // returning 0 would merge keys
+ }
+}
